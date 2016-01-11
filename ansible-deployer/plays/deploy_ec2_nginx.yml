@@ -1,0 +1,25 @@
+---
+########################################################
+# Playbook used for installation
+########################################################
+
+- name: Configure instances
+  hosts: manual_test_vm
+  gather_facts: no
+  sudo: yes
+  tasks:
+  - name: Install nginx and other pkgs
+    yum: >
+      name={{ item }}
+      state=installed
+    with_items:
+    - nginx
+    - figlet
+
+  - name: Replace WWW msg
+    shell: figlet {{ www_msg }} > /usr/share/nginx/html/index.html
+
+  - name: Make sure nginx is started
+    service: >
+      name=nginx
+      state=restarted
