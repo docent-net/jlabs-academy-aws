@@ -1,0 +1,7 @@
+aws:
+  key_pair: docent_ocado
+  region: eu-central-1
+  vpc:
+    id: vpc-9eab26f7
+  instance_type: t2.micro
+  ami: ami-83cfd1ef

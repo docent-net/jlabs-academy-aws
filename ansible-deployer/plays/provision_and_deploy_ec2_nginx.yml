@@ -1,0 +1,83 @@
+---
+########################################################
+# Playbok for provisioning ec2 vm and installing nginx
+########################################################
+
+- hosts: localhost
+  connection: local
+  gather_facts: False
+  vars_files:
+  - ../vault/vault.yml
+  - ../inventory/host_vars/ec2.yml
+  tasks:
+  - name: Create security group
+    ec2_group:
+      aws_access_key: "{{ vault.aws.docent.access_key }}"
+      aws_secret_key: "{{ vault.aws.docent.secret_key }}"
+      region: "{{ aws.region }}"
+      description: "Security group"
+      name: "web-ansible"
+      state: present
+      vpc_id: "{{ aws.vpc.id }}"
+      rules:
+        - proto: tcp
+          from_port: 80
+          to_port: 80
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 22
+          to_port: 22
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 443
+          to_port: 443
+          cidr_ip: 0.0.0.0/0
+    register: ec2_group
+
+  - name: Provision VM
+    ec2:
+      aws_access_key: "{{ vault.aws.docent.access_key }}"
+      aws_secret_key: "{{ vault.aws.docent.secret_key }}"
+      region: "{{ aws.region }}"
+
+      key_name: "{{ aws.key_pair }}"
+      group_id: "{{ ec2_group.group_id }}"
+      instance_type: "{{ aws.instance_type }}"
+      image: "{{ aws.ami }}"
+      wait: true
+    register: ec2
+
+  - name: Add instances to temporary inventory
+    add_host: >
+      hostname={{ item.public_ip }}
+      groups=nginx
+    with_items: ec2.instances
+
+  - name: Wait for box is alive
+    local_action:
+      wait_for port=22
+      host="{{ item.public_ip }}"
+      search_regex=OpenSSH
+      delay=10
+    with_items: ec2.instances
+
+- name: Install nginx
+  hosts: nginx
+  sudo: yes
+  gather_facts: yes
+  tasks:
+  - name: Install nginx and other pkgs
+    yum: >
+      name={{ item }}
+      state=installed
+    with_items:
+    - nginx
+    - figlet
+
+  - name: Replace WWW msg
+    shell: figlet {{ www_msg }} > /usr/share/nginx/html/index.html
+
+  - name: Make sure nginx is started
+    service: >
+      name=nginx
+      state=restarted

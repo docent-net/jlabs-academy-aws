@@ -1,7 +1,7 @@
 ---
-########################################################
-# Playbook used for installation
-########################################################
+###################################################################
+# Playbook used for nginx installation on already provisioned VM
+###################################################################
 
 - name: Configure instances
   hosts: manual_test_vm
