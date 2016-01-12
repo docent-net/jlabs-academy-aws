@@ -13,12 +13,15 @@ Materials from my presentation during J-Labs Academy Devops/AWS 2015-01-12
 
 #### Create EC2 from AWS console ####
 
+- Install Ansible: `yum / apt-get install ansible`
+- [configure your](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html) **~/.aws/{credentials,config}** files
 - create instance from AWS console (manually via GUI)
 - edit **inventory/prod** and replace IP addr with the new one
 - simply invoke `ansible-playbook -i inventory/prod plays/deploy_ec2_nginx.yml --extra-vars="www_msg=manual-deploy"`
 
 #### Poke with AWS CLI ###
 
+- Install AWS CLI: `pip install aws-cli` (preferably inside virtualenv)
 - create security group:
     - `aws ec2 create-security-group --group-name <group_name> --description test --region eu-central-1 --vpc-id <vpc_id>`
     - `aws ec2 authorize-security-group-ingress --group-id <group_id> --protocol tcp --port 22 --cidr 0.0.0.0/0 --region eu-central-1`
@@ -37,6 +40,7 @@ Materials from my presentation during J-Labs Academy Devops/AWS 2015-01-12
 
 #### Boto ####
 
+- Install boto: `pip install boto` (preferably inside virtualenv)
 - Remember to configure your **~/.boto** file
 - Code goes like this:
 ```python
@@ -57,6 +61,25 @@ conn.run_instances( image_id='<your_ami>',
                     instance_type='t2.micro'
                     )
 ```
+- edit **inventory/prod** and replace IP addr with the new one
+- run Ansible Nginx installer:
+    - `ansible-playbook -i inventory/prod plays/deploy_ec2_nginx.yml --extra-vars="www_msg=awscli-deploy"`
+- Simply `curl <PublicIp>`
+
+#### Ansible ####
+
+- Remember to configure your AWS credentials:
+    - copy **ansible_deployer/vault/vault.yml.j2** to **ansible_deployer/vault/vault.yml**
+    - enter correct credentials in **ansible_deployer/vault/vault.yml**
+    - create text file containing your secret password **outside of the repository**: `echo "very|secret|password" > ~/.passwords/vault.pass`
+    - encrypt vault file: `ansible-vault encrypt --vault-password-file ~/.passwords/vault.pass ansible_deployer/vault/vault.yml**
+- Run playbook: `ansible-playbook -i inventory plays/provision_and_deploy_ec2_nginx.yml --vault-password-file ~/.passwords/vault.pass --extra-vars="www_msg=ansible-deploy"
+- Simply `curl <PublicIp>`
+
+#### apache-libcloud ####
+
+- Install apache-libcloud: `pip install apache-libcloud` (preferably inside virtualenv)
+- Just run: `python libcloud_provisioner/provision.py`
 - edit **inventory/prod** and replace IP addr with the new one
 - run Ansible Nginx installer:
     - `ansible-playbook -i inventory/prod plays/deploy_ec2_nginx.yml --extra-vars="www_msg=awscli-deploy"`
